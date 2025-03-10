@@ -16,6 +16,8 @@ ENV PIP_USER="true"
 ARG PIP_NO_WARN_SCRIPT_LOCATION=0
 ARG PIP_ROOT_USER_ACTION="ignore"
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install build dependencies
 RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apt \
     --mount=type=cache,id=aptlists-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/lib/apt/lists \
@@ -26,9 +28,9 @@ RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/v
 # The versions must align and be in sync with the requirements_linux_docker.txt
 # hadolint ignore=SC2102
 RUN --mount=type=cache,id=pip-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/root/.cache/pip \
-    pip install -U --extra-index-url https://download.pytorch.org/whl/cu121 --extra-index-url https://pypi.nvidia.com \
-    torch==2.1.2 torchvision==0.16.2 \
-    xformers==0.0.23.post1 \
+    pip install -U --extra-index-url https://download.pytorch.org/whl/cu126 --extra-index-url https://pypi.nvidia.com \
+    torch torchvision \
+    xformers \
     ninja \
     pip setuptools wheel
 
@@ -58,12 +60,14 @@ ARG TARGETVARIANT
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /tmp
 
-ENV CUDA_VERSION=12.1.1
-ENV NV_CUDA_CUDART_VERSION=12.1.105-1
-ENV NVIDIA_REQUIRE_CUDA=cuda>=12.1
-ENV NV_CUDA_COMPAT_PACKAGE=cuda-compat-12-1
+ENV CUDA_RT_VERSION=12-6
+# ENV NV_CUDA_CUDART_VERSION=12.1.105-1
+# ENV NVIDIA_REQUIRE_CUDA=cuda>=12.1
+# ENV NV_CUDA_COMPAT_PACKAGE=cuda-compat-12-1
 
 # Install CUDA partially
 ADD https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/cuda-keyring_1.0-1_all.deb .
@@ -77,8 +81,10 @@ RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/v
     # Installing the whole CUDA typically increases the image size by approximately **8GB**.
     # To decrease the image size, we opt to install only the necessary libraries.
     # Here is the package list for your reference: https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64
-    # !If you experience any related issues, replace the following line with `cuda-12-1` to obtain the complete CUDA package.
-    cuda-cudart-12-1=${NV_CUDA_CUDART_VERSION} ${NV_CUDA_COMPAT_PACKAGE} libcusparse-12-1 libnvjitlink-12-1
+    # !If you experience any related issues, replace the following line with `cuda-12-6` to obtain the complete CUDA package.
+    cuda-cudart-${CUDA_RT_VERSION} cuda-compat-${CUDA_RT_VERSION} libcusparse-${CUDA_RT_VERSION} libnvjitlink-${CUDA_RT_VERSION}
+
+ENV CUDA_VERSION=12.6
 
 # Install runtime dependencies
 RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apt \
@@ -92,8 +98,9 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/libnvinfer.so /usr/lib/x86_64-linux-gnu/libn
 
 # Create user
 ARG UID
-RUN groupadd -g $UID $UID && \
-    useradd -l -u $UID -g $UID -m -s /bin/sh -N $UID
+ARG USERNAME=kohya
+RUN groupadd -g $UID $USERNAME && \
+    useradd -l -u $UID -g $UID -m -s /bin/sh -N $USERNAME
 
 # Create directories with correct permissions
 RUN install -d -m 775 -o $UID -g 0 /dataset && \
