@@ -16,6 +16,8 @@ ENV PIP_USER="true"
 ARG PIP_NO_WARN_SCRIPT_LOCATION=0
 ARG PIP_ROOT_USER_ACTION="ignore"
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install build dependencies
 RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apt \
     --mount=type=cache,id=aptlists-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/lib/apt/lists \
@@ -28,11 +30,9 @@ RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/v
 RUN --mount=type=cache,id=pip-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel ninja &&\
     pip install -U \
-    --index-url https://download.pytorch.org/whl/cu124 \
-    --extra-index-url https://pypi.nvidia.com \
-    torch==2.5.0+cu124 \
-    torchvision==0.20.0+cu124 &&\
-    pip install -U xformers --index-url https://download.pytorch.org/whl/cu124
+    --extra-index-url https://download.pytorch.org/whl/cu126 --extra-index-url https://pypi.nvidia.com \
+    torch torchvision &&\
+    pip install -U xformers --index-url https://download.pytorch.org/whl/cu126
 
 # Install requirements
 RUN --mount=type=cache,id=pip-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/root/.cache/pip \
@@ -60,8 +60,9 @@ ARG TARGETVARIANT
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
-WORKDIR /tmp
+ENV DEBIAN_FRONTEND=noninteractive
 
+WORKDIR /tmp
 
 # Install CUDA partially
 ADD https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb .
@@ -72,7 +73,7 @@ RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/v
     sed -i 's/^Components: main$/& contrib/' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-    cuda-toolkit-12-4
+    cuda-toolkit-12-6
 
 # Install runtime dependencies
 RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apt \
@@ -86,8 +87,9 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/libnvinfer.so /usr/lib/x86_64-linux-gnu/libn
 
 # Create user
 ARG UID
-RUN groupadd -g $UID $UID && \
-    useradd -l -u $UID -g $UID -m -s /bin/sh -N $UID
+ARG USERNAME=kohya
+RUN groupadd -g $UID $USERNAME && \
+    useradd -l -u $UID -g $UID -m -s /bin/sh -N $USERNAME
 
 # Create directories with correct permissions
 RUN install -d -m 775 -o $UID -g 0 /dataset && \
