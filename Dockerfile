@@ -31,6 +31,7 @@ RUN --mount=type=cache,id=pip-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/r
     pip install -U --extra-index-url https://download.pytorch.org/whl/cu126 --extra-index-url https://pypi.nvidia.com \
     torch torchvision \
     xformers \
+    triton \
     ninja \
     pip setuptools wheel
 
@@ -85,12 +86,14 @@ RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/v
     cuda-cudart-${CUDA_RT_VERSION} cuda-compat-${CUDA_RT_VERSION} libcusparse-${CUDA_RT_VERSION} libnvjitlink-${CUDA_RT_VERSION}
 
 ENV CUDA_VERSION=12.6
+# BNB does not support CUDA 12.6 yet
+ENV BNB_CUDA_VERSION=124
 
 # Install runtime dependencies
 RUN --mount=type=cache,id=apt-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apt \
     --mount=type=cache,id=aptlists-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/lib/apt/lists \
     apt-get update && \
-    apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libjpeg62 libtcl8.6 libtk8.6 libgoogle-perftools-dev dumb-init
+    apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libjpeg62 libtcl8.6 libtk8.6 libgoogle-perftools-dev dumb-init build-essential
 
 # Fix missing libnvinfer7
 RUN ln -s /usr/lib/x86_64-linux-gnu/libnvinfer.so /usr/lib/x86_64-linux-gnu/libnvinfer.so.7 && \
