@@ -34,6 +34,7 @@ services:
       - ./.cache/nv:/home/1000/.nv
       - ./.cache/keras:/home/1000/.keras
       - ./.cache/config:/home/1000/.config # For backward compatibility
+    shm_size: 16gb
     deploy:
       resources:
         reservations:
@@ -42,19 +43,19 @@ services:
               capabilities: [gpu]
               device_ids: ["all"]
 
-  # tensorboard:
-  #   container_name: tensorboard
-  #   image: tensorflow/tensorflow:latest-gpu
-  #   ports:
-  #     # !Please change the port in .env file
-  #     - ${TENSORBOARD_PORT:-6006}:6006
-  #   volumes:
-  #     - ./dataset/logs:/app/logs
-  #   command: tensorboard --logdir=/app/logs --bind_all
-  #   deploy:
-  #     resources:
-  #       reservations:
-  #         devices:
-  #           - driver: nvidia
-  #             capabilities: [gpu]
-  #             device_ids: ["all"]
+  tensorboard:
+    container_name: tensorboard
+    image: tensorflow/tensorflow:latest-gpu
+    ports:
+      # !Please change the port in .env file
+      - ${TENSORBOARD_PORT:-6006}:6006
+    volumes:
+      - ./dataset/logs:/app/logs
+    command: tensorboard --logdir=/app/logs --bind_all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              device_ids: ["all"]
